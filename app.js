@@ -3,13 +3,19 @@ const app = express();
 import api from "./routes/index.js";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import createFakeData from "./createFaceData.js";
 dotenv.config();
 
 const { PORT, MONGO_URI } = process.env;
 
 mongoose
-  .connect(MONGO_URI, { useNewUrlParser: true, useFindAndModify: false })
+  .connect(MONGO_URI, {
+    useNewUrlParser: true,
+    useFindAndModify: false,
+    useUnifiedTopology: true,
+  })
   .then(() => {
+    /* createFakeData(); */
     console.log("Connected to MongoDB");
   })
   .catch((error) => {

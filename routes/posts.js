@@ -1,6 +1,7 @@
 import express from "express";
 import Post from "../models/post.js"; // 모델 인스턴스를 불러온다.
 import { checkObjectId } from "./middlewares.js";
+import Joi from "@hapi/joi";
 const router = express.Router();
 
 /*  전체 글 목록
@@ -8,9 +9,27 @@ const router = express.Router();
 */
 
 router.get("/", async (req, res, next) => {
+  const page = parseInt(req.query.page || "1", 10);
+  if (page < 1) {
+    return res.status(400).send("잘못된 페이지 입니다.");
+  }
   try {
-    const posts = await Post.find().exec(); // find 메서드 후에는 exec를 호출해야 서버에 쿼리요청을 한다.
-    return res.status(200).json(posts);
+    const posts = await Post.find()
+      .sort({ _id: -1 })
+      .limit(10)
+      .skip((page - 1) * 10)
+      .lean()
+      .exec(); // find 메서드 후에는 exec를 호출해야 서버에 쿼리요청을 한다.
+    const postCount = await Post.countDocuments().exec();
+    res.setHeader("Last-page", Math.ceil(postCount / 10));
+
+    return res.status(200).json(
+      posts.map((post) => ({
+        ...post,
+        body:
+          post.body.length < 100 ? post.body : `${post.body.slice(0, 100)}...`,
+      }))
+    );
   } catch (error) {
     console.error(error);
     next(error);
@@ -30,6 +49,7 @@ router.get("/:id", checkObjectId, async (req, res, next) => {
     }
     res.status(200).json(post);
   } catch (error) {
+    console.log("atch문 에러");
     console.error(error);
     next(error);
   }
@@ -45,6 +65,16 @@ router.get("/:id", checkObjectId, async (req, res, next) => {
 */
 
 router.post("/", async (req, res, next) => {
+  const schema = Joi.object().keys({
+    title: Joi.string().required(),
+    body: Joi.string().required(),
+    tags: Joi.array().items(Joi.string()).required(),
+  });
+
+  const result = schema.validate(req.body);
+  if (result.error) {
+    return res.status(400).send(result.error);
+  }
   const { title, body, tags } = req.body;
   const post = new Post({
     title,
@@ -66,6 +96,15 @@ router.post("/", async (req, res, next) => {
 
 router.patch("/:id", checkObjectId, async (req, res, next) => {
   const { id } = req.params;
+  const schema = Joi.object().keys({
+    title: Joi.string(),
+    body: Joi.string(),
+    tags: Joi.array().items(Joi.string()),
+  });
+  const result = schema.validate(req.body);
+  if (result.error) {
+    return res.status(400).send(result.error);
+  }
   try {
     const post = await Post.findByIdAndUpdate(id, req.body, {
       new: true, // true시 바뀐값으로 객체가 새로 생성됨 false시 변경전 객체를 리턴한다.
