@@ -1,6 +1,6 @@
 import express from "express";
 import Post from "../models/post.js"; // 모델 인스턴스를 불러온다.
-import { checkObjectId } from "./middlewares.js";
+import checkObjectId from "../lib/checkObjectId.js";
 import Joi from "@hapi/joi";
 const router = express.Router();
 
@@ -13,6 +13,7 @@ router.get("/", async (req, res, next) => {
   if (page < 1) {
     return res.status(400).send("잘못된 페이지 입니다.");
   }
+
   try {
     const posts = await Post.find()
       .sort({ _id: -1 })

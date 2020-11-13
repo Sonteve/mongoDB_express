@@ -3,7 +3,10 @@ const app = express();
 import api from "./routes/index.js";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import createFakeData from "./createFaceData.js";
+import morgan from "morgan";
+import jwtMiddleware from "./lib/jwtMiddleware.js";
+import cookieParser from "cookie-parser";
+
 dotenv.config();
 
 const { PORT, MONGO_URI } = process.env;
@@ -21,10 +24,12 @@ mongoose
   .catch((error) => {
     console.error(error);
   });
-
+app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use(cookieParser());
+app.use(jwtMiddleware);
 app.use("/api", api);
 
 const port = PORT || 4000;
